@@ -1,0 +1,25 @@
+version: "3"
+
+services:
+
+  rabbitdb:
+    build: 
+      context: .
+      dockerfile: rabbitdb/Dockerfile
+    container_name: rabbitdb
+    image: rabbitdb:latest
+    ports:
+#      - 4369:4369
+      - 5672:5672
+#      - 127.0.0.1:5672:5672
+      - 127.0.0.1:15672:15672
+#      - 25672:25672
+#      - 35197:35197
+    restart: always
+    environment:
+      RABBITMQ_LOGS: /var/log/rabbitmq/rabbit.log
+    volumes:
+      - "/var/data/rabbitdb:/var/lib/rabbitmq"
+      - "/var/data/rabbitdb/logs:/var/log/rabbitmq"
+
+      
