@@ -23,7 +23,7 @@ help:
 release: clean ${MAKEFILE} ${COMPOSE_FILE} ${RABBITDB}
 	mkdir ${RELEASE}
 	zip -r ${RELEASE}/${RABBITDB}-$(shell date '+%Y-%m-%d').zip \
-	${RABBITDB}	${MAKEFILE} ${COMPOSE_FILE} ${ENV} ${DOCKERIGNORE}
+	${RABBITDB}	${MAKEFILE} ${COMPOSE_FILE} ${ENV} ${DOCKERIGNORE} ${LICENSE}
 
 # Очистка мусора и удаление старого релиза
 clean:
