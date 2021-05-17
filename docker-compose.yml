@@ -1,25 +1,32 @@
-version: "3"
+version: "3.3"
 
 services:
 
   rabbitdb:
     build: 
       context: .
-      dockerfile: rabbitdb/Dockerfile
-    container_name: rabbitdb
-    image: rabbitdb:latest
+      dockerfile: ${RABBITDB_DOCKERFILE}
+    container_name: ${RABBITDB}
+    image: ${RABBITDB_RELEASE}
     ports:
-#      - 4369:4369
-      - 5672:5672
-#      - 127.0.0.1:5672:5672
-      - 127.0.0.1:15672:15672
-#      - 25672:25672
-#      - 35197:35197
+#      - ${RABBITDB_PORT01}:4369
+      - ${HOST}:${RABBITDB_PORT02}:5672
+      - ${LOCAL_HOST}:${RABBITDB_PORT03}:15672
+#      - ${RABBITDB_PORT04}:25672
+#      - ${RABBITDB_PORT05}:35197
     restart: always
-    environment:
-      RABBITMQ_LOGS: /var/log/rabbitmq/rabbit.log
     volumes:
-      - "/var/data/rabbitdb:/var/lib/rabbitmq"
-      - "/var/data/rabbitdb/logs:/var/log/rabbitmq"
+      - vol-rabbitdb:/var/lib/rabbitmq
+    networks:
+      - rabbitdb-net
 
-      
+volumes:
+  vol-rabbitdb:
+
+networks:
+  rabbitdb-net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: ${NET}
