@@ -4,33 +4,26 @@
 DOCKER=$(shell which docker)
 COMPOSE=$(shell which docker-compose)
 PWD=$(shell pwd)
-RELEASE=release
-DOCKERFILE=Dockerfile
-COMPOSE_FILE=docker-compose.yml
-MAKEFILE=Makefile
-#=============================================
-# RabbitMQ
-RABBITDB=rabbitdb
-# Где располагаются данные RabbitMQ на машине хоста
-RABBITDBHOSTDIR=/var/data/rabbitdb
-DOCKERFILE_REBBITDB=${RABBITDB}/${DOCKERFILE}
+ENV=.env
+DOCKERIGNORE=.dockerignore
+include ${ENV}
 #=============================================
 
 .DEFAULT: help
 
 help:
-	@echo "make build	- Building Redis in Docker"
-	@echo "make start	- Start Redis in Docker"
-	@echo "make stop	- Stopping Redis in Docker"
-	@echo "make log	- Output of logs for Redis in Docker"
-	@echo "make remove	- Deleting a Redis in Docker"
+	@echo "make build - Building Redis in Docker"
+	@echo "make start - Start Redis in Docker"
+	@echo "make stop - Stopping Redis in Docker"
+	@echo "make log - Output of logs for Redis in Docker"
+	@echo "make remove - Deleting a Redis in Docker"
 
 #=============================================
 # Релиз сервиса RabbitMQ
 release: clean ${MAKEFILE} ${COMPOSE_FILE} ${RABBITDB}
 	mkdir ${RELEASE}
 	zip -r ${RELEASE}/${RABBITDB}-$(shell date '+%Y-%m-%d').zip \
-	${RABBITDB}	${MAKEFILE} ${COMPOSE_FILE}
+	${RABBITDB}	${MAKEFILE} ${COMPOSE_FILE} ${ENV} ${DOCKERIGNORE}
 
 # Очистка мусора и удаление старого релиза
 clean:
@@ -39,67 +32,59 @@ clean:
 #=============================================
 
 # Сборка RabbitMQ в Docker
-build-rabbit: ${DOCKER} ${DOCKERFILE_REBBITDB}
+build-rabbit: ${DOCKER} ${RABBITDB_DOCKERFILE}
 	# make release
-	docker build \
-	--file ./${DOCKERFILE_REBBITDB} \
-	--tag ${RABBITDB}:latest ./
+	${DOCKER} build \
+	--file ./${RABBITDB_DOCKERFILE} \
+	--tag ${RABBITDB_RELEASE} ./
 
 # Стоп RabbitMQ в Docker, используется для отладки
-stop-rabbit: ${DOCKER} ${DOCKERFILE_REBBITDB}
+stop-rabbit: ${DOCKER} ${RABBITDB_DOCKERFILE}
 	! [ `${DOCKER} ps | grep ${RABBITDB} | wc -l` -eq 1 ] || \
 	${DOCKER} stop ${RABBITDB}
 
-
 # Удаление RabbitMQ в Docker, используется для отладки
-remove-rabbit: ${DOCKER} ${DOCKERFILE_REBBITDB}
+remove-rabbit: ${DOCKER} ${RABBITDB_DOCKERFILE}
 	make stop-rabbit
-	${DOCKER} rmi ${RABBITDB}:latest
-
+	${DOCKER} rmi ${RABBITDB_RELEASE}
 
 # Логирование RabbitMQ в Docker, используется для отладки
-log-rabbit: ${DOCKER} ${DOCKERFILE_REBBITDB}
+log-rabbit: ${DOCKER} ${RABBITDB_DOCKERFILE}
 	! [ `${DOCKER} ps | grep ${RABBITDB} | wc -l` -eq 1 ] || \
 	${DOCKER} logs --follow --tail 500 ${RABBITDB}
 
 #=============================================
 # Проверка наличия необходимых дирректорий для работы приложений
-check-dir:
-	[ -d ${RABBITDBHOSTDIR} ] || sudo mkdir -p ${RABBITDBHOSTDIR}
-
+# check-dir:
+# 	[ -d ${RABBITDBHOSTDIR} ] || sudo mkdir -p ${RABBITDBHOSTDIR}
 
 # Сборка RabbitMQ в Docker
-build: ${DOCKER} ${COMPOSE} ${DOCKERFILE_REBBITDB} ${COMPOSE_FILE}
+build: ${DOCKER} ${COMPOSE} ${RABBITDB_DOCKERFILE} ${COMPOSE_FILE}
 	make release
-	make check-dir
+#	make check-dir
 	make build-rabbit
 
-
 # Старт RabbitMQ в Docker с использованием Docker Compose
-start: ${DOCKER} ${COMPOSE} ${DOCKERFILE_REBBITDB} ${COMPOSE_FILE}
-	make check-dir
+start: ${DOCKER} ${COMPOSE} ${RABBITDB_DOCKERFILE} ${COMPOSE_FILE}
+#	make check-dir
 	${COMPOSE} -f ${COMPOSE_FILE} up -d
 
-
 # Остановка RabbitMQ в Docker с использованием Docker Compose
-stop: ${DOCKER} ${COMPOSE} ${DOCKERFILE_REBBITDB} ${COMPOSE_FILE}
+stop: ${DOCKER} ${COMPOSE} ${RABBITDB_DOCKERFILE} ${COMPOSE_FILE}
 	${COMPOSE} -f ${COMPOSE_FILE} down
 
-
 # Логирование RabbitMQ в Docker с использованием Docker Compose
-log: ${DOCKER} ${COMPOSE} ${DOCKERFILE_REBBITDB} ${COMPOSE_FILE}
+log: ${DOCKER} ${COMPOSE} ${RABBITDB_DOCKERFILE} ${COMPOSE_FILE}
 	${COMPOSE} -f ${COMPOSE_FILE} logs --follow --tail 500
 
-
 # Рестарт RabbitMQ в Docker с использованием Docker Compose
-restart: ${DOCKER} ${COMPOSE} ${DOCKERFILE_REBBITDB} ${COMPOSE_FILE}
+restart: ${DOCKER} ${COMPOSE} ${RABBITDB_DOCKERFILE} ${COMPOSE_FILE}
 	make stop
 	sleep 3
 	make start
 
-
 # Удаление RabbitMQ в Docker
-remove: ${DOCKER} ${COMPOSE} ${DOCKERFILE_REBBITDB} ${COMPOSE_FILE}
+remove: ${DOCKER} ${COMPOSE} ${RABBITDB_DOCKERFILE} ${COMPOSE_FILE}
 	make stop
 	make remove-rabbit
 
