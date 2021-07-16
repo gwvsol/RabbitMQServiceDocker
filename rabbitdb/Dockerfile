@@ -1,7 +1,11 @@
 # FROM rabbitmq
-FROM rabbitmq:3-management
+FROM rabbitmq:management-alpine
 LABEL maintainer="Mikhail Fedorov" email="jwvsol@yandex.ru"
 LABEL version="latest"
+
+ENV RABBITDB_ZBXUSER ${RABBITDB_ZBXUSER}
+ENV RABBITDB_ZBXPASS ${RABBITDB_ZBXPASS}
+ENV RABBITMQ_PID_FILE ${RABBITMQ_PID_FILE}
 
 # Используется в некоторых случаях если не возможно 
 # собрать образ и в системе используется Proxy
@@ -12,7 +16,10 @@ LABEL version="latest"
 RUN rabbitmq-plugins enable --offline rabbitmq_management
 
 # Добавляем файл настроек базы Rabbit
-# ADD rabbitdb/rabbitmq.conf /etc/rabbitmq/rabbitmq.conf
+ADD rabbitdb/rabbitmq.conf /etc/rabbitmq/rabbitmq.conf
+ADD rabbitdb/init.sh /opt/rabbitmq/sbin/init.sh
+RUN chmod +x /opt/rabbitmq/sbin/init.sh
 
-# Какие порты открываем
-# EXPOSE 15671 15672
+# Define default command
+CMD ["init.sh"]
+
