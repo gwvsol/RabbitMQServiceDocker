@@ -8,10 +8,14 @@ services:
       dockerfile: ${RABBITDB_DOCKERFILE}
     container_name: ${RABBITDB}
     image: ${RABBITDB_RELEASE}
+    environment:
+        RABBITDB_ZBXUSER: ${RABBITDB_ZBXUSER}
+        RABBITDB_ZBXPASS: ${RABBITDB_ZBXPASS}
+        RABBITMQ_PID_FILE: ${RABBITMQ_PID_FILE}
     ports:
 #      - ${RABBITDB_PORT01}:4369
       - ${HOST}:${RABBITDB_PORT02}:5672
-      - ${LOCAL_HOST}:${RABBITDB_PORT03}:15672
+      - ${HOST}:${RABBITDB_PORT03}:15672
 #      - ${RABBITDB_PORT04}:25672
 #      - ${RABBITDB_PORT05}:35197
     restart: always
