@@ -22,4 +22,3 @@ RUN chmod +x /opt/rabbitmq/sbin/init.sh
 
 # Define default command
 CMD ["init.sh"]
-
