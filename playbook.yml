@@ -1,0 +1,112 @@
+# vi:ft=yaml.ansible
+---
+- hosts: all
+
+  vars:
+    registry_host: techvsolregistry.svc.1ckab.ru
+    registry_user: kab
+    registry_passwd: Let90nc23
+
+    mqtt_image: rabbitmq-db
+    image_tag: 2022-12-08-01
+    replaceable_tag: latest
+
+    remote_install_path: /srv/docker
+    dir_mqtt: '{{ mqtt_image }}'
+    dir_owner: kab
+    dir_mode: "u=rwx,g=rwx,o=r"
+    file_mode: "u=rw,g=r,o=r"
+    makefile: Makefile
+    makefile_docker: Makefile.Docker
+    compose_file: docker-compose.yml
+    mqtt_config_file: rabbitmq.conf
+
+    mqtt_service_dir:
+      - '{{ remote_install_path }}/{{ dir_mqtt }}'
+
+    mqtt_service_files:
+      - '{{ compose_file }}'
+      - '{{ makefile_docker }}'
+      - '{{ mqtt_config_file }}'
+
+    mqtt_service_replace_file:
+      - '{{ remote_install_path }}/{{ dir_mqtt }}/{{ compose_file }}'
+
+    mqtt_service_images:
+      - '{{ registry_host }}/{{ mqtt_image }}:{{ image_tag }}'
+
+    mqtt_service_new_tag:
+      - name: '{{ registry_host }}/{{ mqtt_image }}:{{ image_tag }}'
+        repository: '{{ mqtt_image }}:{{ image_tag }}'
+
+
+  tasks:
+    - block:
+      - name: Создание дирректорий
+        file:
+          path: '{{ item }}'
+          owner: '{{ dir_owner }}'
+          group: '{{ dir_owner }}'
+          mode: '{{ dir_mode }}'
+          state: directory
+        loop: '{{ mqtt_service_dir }}'
+
+    - block:
+      - name: Копирование файлов
+        copy:
+          src: '{{ item }}'
+          dest: '{{ remote_install_path }}/{{ dir_mqtt }}/'
+          owner: '{{ dir_owner }}'
+          group: '{{ dir_owner }}'
+          mode: '{{ file_mode }}'
+        loop: '{{ mqtt_service_files }}'
+
+      - name: Переименование Makefile.docker => Makefile
+        copy:
+          src: '{{ remote_install_path }}/{{ dir_mqtt }}/{{ makefile_docker }}'
+          dest: '{{ remote_install_path }}/{{ dir_mqtt }}/{{ makefile }}'
+          remote_src: yes
+
+      - name: Удаление Makefile.docker
+        file:
+          state: absent
+          path: '{{ remote_install_path }}/{{ dir_mqtt }}/{{ makefile_docker }}'
+
+    - block:
+      - name: => REGISTRY
+        docker_login:
+          registry_url: '{{ registry_host }}'
+          username: '{{ registry_user }}'
+          password: '{{ registry_passwd }}'
+          reauthorize: true
+
+      - name: Скачивание образов Docker
+        docker_image:
+          name: '{{ item }}'
+          source: pull
+        loop: '{{ mqtt_service_images }}'
+
+      - name: Создание новых tag
+        docker_image:
+          name: '{{ item.name }}'
+          repository: '{{ item.repository }}'
+          force_tag: true
+          source: local
+        loop: '{{ mqtt_service_new_tag }}'
+
+      - name: Удаление избыточных образов
+        docker_image:
+          state: absent
+          name: '{{ item }}'
+        loop: '{{ mqtt_service_images }}'
+
+      - name: Замена имен tag в docker-compose.yml
+        replace:
+          path: '{{ item }}'
+          regexp:  '{{ replaceable_tag }}'
+          replace: '{{ image_tag }}'
+        loop: '{{ mqtt_service_replace_file }}'
+
+      - name: REGISTRY =>
+        docker_login:
+          state: absent
