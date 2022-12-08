@@ -1,0 +1,27 @@
+#===========================================================
+
+DOCKER=$(shell which docker)
+COMPOSE=$(shell which docker-compose)
+COMPOSE_FILE=docker-compose.yml
+
+#===========================================================
+# Старт RABBITDB
+start-rabbitmq: ${DOCKER} ${COMPOSE} ${COMPOSE_FILE}
+	@${COMPOSE} -f ${COMPOSE_FILE} up -d rabbitmq-db
+
+# Стоп RABBITDB
+stop-rabbitmq: ${DOCKER} ${COMPOSE} ${COMPOSE_FILE}
+	@${COMPOSE} -f ${COMPOSE_FILE} stop rabbitmq-db
+	@${DOCKER} container rm rabbitmq-db
+
+# Рестарт RABBITDB
+restart-rabbitmq: ${DOCKER} ${COMPOSE} ${COMPOSE_FILE}
+	@make stop-rabbitmq
+	@sleep 3
+	@make start-rabbitmq
+
+# Логирование RABBITDB
+log-rabbitmq: ${DOCKER} ${COMPOSE} ${COMPOSE_FILE}
+	@${COMPOSE} -f ${COMPOSE_FILE} logs --follow --tail 500 rabbitmq-db
+
+#===========================================================

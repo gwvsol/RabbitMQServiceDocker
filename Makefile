@@ -1,91 +1,106 @@
-.PHONY: help pre build start stop log remove
+#===========================================================
+export ARCHIVE=archive
+export COMPOSE_FILE=docker-compose.yml
+export DOCKERFILE=Dockerfile
+export DRONE=.drone.yml
+export README=README.md
+export RELEASE=release
+export LICENSE=LICENSE
+export MAKEFILE=Makefile
+export MAKEFILE_DOCKER=Makefile.Docker
+export PLAYBOOK=playbook.yml
+#
+export REGISTRY_USER=kab
+export REGISTRY_PASSWORD=Let90nc23
+export REGISTRY_TAG=2022-12-08-01
+export REGISTRY_HOST=techvsolregistry.svc.1ckab.ru
+#
+export RABBITDB_RUN=run.sh
+export RABBITDB_IMAGE=rabbitmq-db
+export RABBITDB_CONF=rabbitmq.conf
+export RABBITDB_ZBXUSER=zbx_monitor
+export RABBITDB_ZBXPASS="TNu*&VT345N"
+export RABBITMQ_PID_FILE=/var/lib/rabbitmq/mnesia/rabbitmq
+#
+export DOCKER=$(shell which docker)
+export COMPOSE=$(shell which docker-compose)
+export TIMEZONE=$(shell timedatectl status | awk '$$1 == "Time" && $$2 == "zone:" { print $$3 }')
+export PWD=$(shell pwd)
 
-#ID=$(shell id -u `whoami`)
-DOCKER=$(shell which docker)
-COMPOSE=$(shell which docker-compose)
-PWD=$(shell pwd)
-ENV=.env
-DOCKERIGNORE=.dockerignore
-include ${ENV}
-#=============================================
+#===========================================================
 
-.DEFAULT: help
+ifneq ("$(wildcard $(PWD)/$(MAKEFILE_DOCKER))","")
+    include ${MAKEFILE_DOCKER}
+endif
 
-help:
-	@echo "make build - Building Redis in Docker"
-	@echo "make start - Start Redis in Docker"
-	@echo "make stop - Stopping Redis in Docker"
-	@echo "make log - Output of logs for Redis in Docker"
-	@echo "make remove - Deleting a Redis in Docker"
+#===========================================================
+# Создание релиза приложения
+.PHONY: release
+release: ${COMPOSE_FILE} ${DOCKERFILE} ${RABBITDB_RUN} ${LICENSE} ${MAKEFILE} \
+		 ${MAKEFILE_DOCKER} ${RABBITDB_CONF} ${DRONE} ${PLAYBOOK} ${README}
+	@make clean
+	@printf "\033[0m"
+	@printf "\033[34m"
+	@echo "================================ CREATE RELEASE ===================================="
+	@tar -cvzf ${RELEASE}/${RABBITDB_IMAGE}-$(shell date '+%Y-%m-%d-%H-%M-%S').tar.gz \
+		${COMPOSE_FILE} ${DOCKERFILE} ${RABBITDB_RUN} ${LICENSE} ${MAKEFILE} \
+		${MAKEFILE_DOCKER} ${RABBITDB_CONF} ${DRONE} ${PLAYBOOK} ${README}
+	@printf "\033[32m"
+	@echo "================================ CREATE RELEASE OK! ================================"
+	@printf "\033[0m"
 
-#=============================================
-# Релиз сервиса RabbitMQ
-release: clean ${MAKEFILE} ${COMPOSE_FILE} ${RABBITDB}
-	mkdir ${RELEASE}
-	zip -r ${RELEASE}/${RABBITDB}-$(shell date '+%Y-%m-%d').zip \
-	${RABBITDB}	${MAKEFILE} ${COMPOSE_FILE} ${ENV} ${DOCKERIGNORE} ${LICENSE}
-
-# Очистка мусора и удаление старого релиза
+#===========================================================
+# Очистка мусора
+.PHONY: clean
 clean:
-	rm -fr ${RELEASE}
+	@printf "\033[0m"
+	@printf "\033[33m"
+	@echo "====================================== CLEAN ======================================="
+	@[ -d $(RELEASE) ] || mkdir ${RELEASE}
+	@[ -d $(ARCHIVE) ] || mkdir ${ARCHIVE}
+	@find . '(' -path ./$(ARCHIVE) ')' \
+		-prune -o '(' -name '*.tar.gz' -o -name '*.tar.xz' -o -name '*.zip' ')' \
+		-type f -exec mv -v -t "$(ARCHIVE)" {} +
+	@printf "\033[36m"
+	@echo "==================================== CLEAN OK! ====================================="
+	@printf "\033[0m"
 
-#=============================================
+#===========================================================
+# ################### Сборка RABBITDB ######################
+#===========================================================
 
-# Сборка RabbitMQ в Docker
-build-rabbit: ${DOCKER} ${RABBITDB_DOCKERFILE}
-	# make release
-	${DOCKER} build \
-	--file ./${RABBITDB_DOCKERFILE} \
-	--tag ${RABBITDB_RELEASE} ./
+.PHONY: build-docker-rabbitmq
+build-docker-rabbitmq: ${DOCKER} ${DOCKERFILE}
+	@printf "\033[0m"
+	@printf "\033[34m"
+	@echo "================================= BUILD RABBITDB ==================================="
+	@${DOCKER} build \
+	--build-arg TIMEZONE=${TIMEZONE} \
+	--build-arg RABBITDB_ZBXUSER=${RABBITDB_ZBXUSER} \
+	--build-arg RABBITDB_ZBXPASS=${RABBITDB_ZBXPASS} \
+	--build-arg RABBITMQ_PID_FILE=${RABBITMQ_PID_FILE} \
+	--file ./${DOCKERFILE} \
+	--tag ${RABBITDB_IMAGE}:${REGISTRY_TAG} ./
+	@printf "\033[32m"
+	@echo "========================= BUILD ${RABBITDB_IMAGE}:${REGISTRY_TAG} ========================"
+	@echo "=============================== BUILD RABBITDB OK! ================================="
+	@printf "\033[0m"
 
-# Стоп RabbitMQ в Docker, используется для отладки
-stop-rabbit: ${DOCKER} ${RABBITDB_DOCKERFILE}
-	! [ `${DOCKER} ps | grep ${RABBITDB} | wc -l` -eq 1 ] || \
-	${DOCKER} stop ${RABBITDB}
+#===========================================================
+# ########### Публикация GEOSERVICEDB в REGISTRY ###########
+#===========================================================
+.PHONY: deploy-docker-rabbitmq
+deploy-docker-rabbitmq: ${DOCKER}
+	@printf "\033[0m"
+	@printf "\033[34m"
+	@echo "============================== DEPLOY IMAGE RABBITDB ==============================="
+	@${DOCKER} login -u ${REGISTRY_USER} -p ${REGISTRY_PASSWORD} ${REGISTRY_HOST}
+	@${DOCKER} tag ${RABBITDB_IMAGE}:${REGISTRY_TAG} ${REGISTRY_HOST}/${RABBITDB_IMAGE}:${REGISTRY_TAG}
+	@${DOCKER} push ${REGISTRY_HOST}/${RABBITDB_IMAGE}:${REGISTRY_TAG}
+	@${DOCKER} rmi ${REGISTRY_HOST}/${RABBITDB_IMAGE}:${REGISTRY_TAG} ${RABBITDB_IMAGE}:${REGISTRY_TAG}
+	@${DOCKER} logout
+	@printf "\033[32m"
+	@echo "============================ DEPLOY IMAGE RABBITDB OK! ============================="
+	@printf "\033[0m"
 
-# Удаление RabbitMQ в Docker, используется для отладки
-remove-rabbit: ${DOCKER} ${RABBITDB_DOCKERFILE}
-	make stop-rabbit
-	${DOCKER} rmi ${RABBITDB_RELEASE}
-
-# Логирование RabbitMQ в Docker, используется для отладки
-log-rabbit: ${DOCKER} ${RABBITDB_DOCKERFILE}
-	! [ `${DOCKER} ps | grep ${RABBITDB} | wc -l` -eq 1 ] || \
-	${DOCKER} logs --follow --tail 500 ${RABBITDB}
-
-#=============================================
-# Проверка наличия необходимых дирректорий для работы приложений
-# check-dir:
-# 	[ -d ${RABBITDBHOSTDIR} ] || sudo mkdir -p ${RABBITDBHOSTDIR}
-
-# Сборка RabbitMQ в Docker
-build: ${DOCKER} ${COMPOSE} ${RABBITDB_DOCKERFILE} ${COMPOSE_FILE}
-	make release
-#	make check-dir
-	make build-rabbit
-
-# Старт RabbitMQ в Docker с использованием Docker Compose
-start: ${DOCKER} ${COMPOSE} ${RABBITDB_DOCKERFILE} ${COMPOSE_FILE}
-#	make check-dir
-	${COMPOSE} -f ${COMPOSE_FILE} up -d
-
-# Остановка RabbitMQ в Docker с использованием Docker Compose
-stop: ${DOCKER} ${COMPOSE} ${RABBITDB_DOCKERFILE} ${COMPOSE_FILE}
-	${COMPOSE} -f ${COMPOSE_FILE} down
-
-# Логирование RabbitMQ в Docker с использованием Docker Compose
-log: ${DOCKER} ${COMPOSE} ${RABBITDB_DOCKERFILE} ${COMPOSE_FILE}
-	${COMPOSE} -f ${COMPOSE_FILE} logs --follow --tail 500
-
-# Рестарт RabbitMQ в Docker с использованием Docker Compose
-restart: ${DOCKER} ${COMPOSE} ${RABBITDB_DOCKERFILE} ${COMPOSE_FILE}
-	make stop
-	sleep 3
-	make start
-
-# Удаление RabbitMQ в Docker
-remove: ${DOCKER} ${COMPOSE} ${RABBITDB_DOCKERFILE} ${COMPOSE_FILE}
-	make stop
-	make remove-rabbit
-
-#=============================================
+#===========================================================
