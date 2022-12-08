@@ -2,35 +2,22 @@ version: "3.3"
 
 services:
 
-  rabbitdb:
-    build: 
-      context: .
-      dockerfile: ${RABBITDB_DOCKERFILE}
-    container_name: ${RABBITDB}
-    image: ${RABBITDB_RELEASE}
+  rabbitmq-db:
+    container_name: rabbitmq-db
+    image: rabbitmq-db:latest
     environment:
-        RABBITDB_ZBXUSER: ${RABBITDB_ZBXUSER}
-        RABBITDB_ZBXPASS: ${RABBITDB_ZBXPASS}
-        RABBITMQ_PID_FILE: ${RABBITMQ_PID_FILE}
+        RABBITDB_ZBXUSER: zbx_monitor
+        RABBITDB_ZBXPASS: "TNu*&VT345N"
+        RABBITMQ_PID_FILE: /var/lib/rabbitmq/mnesia/rabbitmq
     ports:
-#      - ${RABBITDB_PORT01}:4369
-      - ${HOST}:${RABBITDB_PORT02}:5672
-      - ${HOST}:${RABBITDB_PORT03}:15672
-#      - ${RABBITDB_PORT04}:25672
-#      - ${RABBITDB_PORT05}:35197
-    restart: always
+      - 5672:5672
+      - 15672:15672
+    # restart: always
+    restart: unless-stopped
     volumes:
       - vol-rabbitdb:/var/lib/rabbitmq
-    networks:
-      - rabbitdb-net
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+
 
 volumes:
   vol-rabbitdb:
-
-networks:
-  rabbitdb-net:
-    driver: bridge
-    ipam:
-      driver: default
-      config:
-        - subnet: ${NET}
