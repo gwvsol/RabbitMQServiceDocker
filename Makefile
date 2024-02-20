@@ -7,13 +7,13 @@ export README=README.md
 export RELEASE=release
 export LICENSE=LICENSE
 export MAKEFILE=Makefile
-export MAKEFILE_DOCKER=Makefile.Docker
+# export MAKEFILE_DOCKER=Makefile.Docker
 export PLAYBOOK=playbook.yml
 #
 export REGISTRY_USER=kab
 export REGISTRY_PASSWORD=Let90nc23
-export REGISTRY_TAG=2022-12-08-01
-export REGISTRY_HOST=techvsolregistry.svc.1ckab.ru
+export REGISTRY_TAG=2024-02-20-01
+export REGISTRY_HOST=registry.svc.1ckab.ru
 #
 export RABBITDB_RUN=run.sh
 export RABBITDB_IMAGE=rabbitmq-db
@@ -29,9 +29,9 @@ export PWD=$(shell pwd)
 
 #===========================================================
 
-ifneq ("$(wildcard $(PWD)/$(MAKEFILE_DOCKER))","")
-    include ${MAKEFILE_DOCKER}
-endif
+# ifneq ("$(wildcard $(PWD)/$(MAKEFILE_DOCKER))","")
+#     include ${MAKEFILE_DOCKER}
+# endif
 
 #===========================================================
 # Создание релиза приложения
@@ -69,8 +69,8 @@ clean:
 # ################### Сборка RABBITDB ######################
 #===========================================================
 
-.PHONY: build-docker-rabbitmq
-build-docker-rabbitmq: ${DOCKER} ${DOCKERFILE}
+.PHONY: build
+build: ${DOCKER} ${DOCKERFILE}
 	@printf "\033[0m"
 	@printf "\033[34m"
 	@echo "================================= BUILD RABBITDB ==================================="
@@ -89,8 +89,8 @@ build-docker-rabbitmq: ${DOCKER} ${DOCKERFILE}
 #===========================================================
 # ########### Публикация GEOSERVICEDB в REGISTRY ###########
 #===========================================================
-.PHONY: deploy-docker-rabbitmq
-deploy-docker-rabbitmq: ${DOCKER}
+.PHONY: deploy
+deploy: ${DOCKER}
 	@printf "\033[0m"
 	@printf "\033[34m"
 	@echo "============================== DEPLOY IMAGE RABBITDB ==============================="
