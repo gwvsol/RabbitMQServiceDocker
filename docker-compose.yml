@@ -2,22 +2,20 @@ version: "3.3"
 
 services:
 
-  rabbitmq-db:
+  rabbitmq:
     container_name: rabbitmq-db
-    image: rabbitmq-db:latest
-    environment:
-        RABBITDB_ZBXUSER: zbx_monitor
-        RABBITDB_ZBXPASS: "TNu*&VT345N"
-        RABBITMQ_PID_FILE: /var/lib/rabbitmq/mnesia/rabbitmq
+    image: registry.svc.1ckab.ru/rabbitmq-db:2024-02-20-01
+    env_file:
+      - .env
     ports:
       - 5672:5672
       - 15672:15672
     # restart: always
     restart: unless-stopped
     volumes:
-      - vol-rabbitdb:/var/lib/rabbitmq
+      # - vol-rabbitdb:/var/lib/rabbitmq
+      - /var/data/rabbitmq-data:/var/lib/rabbitmq
       - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
 
-
-volumes:
-  vol-rabbitdb:
+# volumes:
+#   vol-rabbitdb:
