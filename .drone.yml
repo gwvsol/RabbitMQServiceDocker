@@ -17,8 +17,8 @@ steps:
   commands:
     - apk update
     - apk add make
-    - make build-docker-rabbitmq
-    - make deploy-docker-rabbitmq
+    - make build
+    - make deploy
 
 volumes:
 - name: dockersock
